@@ -6,9 +6,9 @@
 
 LOG_MODULE_REGISTER(layer_leds, CONFIG_ZMK_LOG_LEVEL);
 
-// 1. Define nodes using the Aliases
-#define LOWER_LED_NODE DT_ALIAS(lower_layer_led)
-#define RAISE_LED_NODE DT_ALIAS(raise_layer_led)
+// 1. Define nodes using the Aliases (Corrected)
+#define LOWER_LED_NODE DT_ALIAS(LOWER_LAYER_LED) // <--- FIX IS HERE
+#define RAISE_LED_NODE DT_ALIAS(RAISE_LAYER_LED) // <--- FIX IS HERE
 
 // 2. Safely check if the nodes exist before trying to use them
 #if !DT_NODE_HAS_STATUS(LOWER_LED_NODE, okay) || !DT_NODE_HAS_STATUS(RAISE_LED_NODE, okay)
