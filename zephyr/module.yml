@@ -1,1 +1,5 @@
+name: layer_leds
+build:
+  cmake: .
+  kconfig: Kconfig
 
