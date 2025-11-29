@@ -6,18 +6,21 @@
 
 LOG_MODULE_REGISTER(layer_leds, CONFIG_ZMK_LOG_LEVEL);
 
-// 1. Define nodes using the Aliases (Corrected)
-#define LOWER_LED_NODE DT_ALIAS(LOWER_LAYER_LED) // <--- FIX IS HERE
-#define RAISE_LED_NODE DT_ALIAS(RAISE_LAYER_LED) // <--- FIX IS HERE
+// Define Node IDs using the literal alias name from your DTS
+// lower-layer-led and raise-layer-led are the exact names from your DTS aliases block.
+#define LOWER_LED_NODE_ID DT_ALIAS_GET(lower-layer-led)
+#define RAISE_LED_NODE_ID DT_ALIAS_GET(raise-layer-led)
 
 // 2. Safely check if the nodes exist before trying to use them
-#if !DT_NODE_HAS_STATUS(LOWER_LED_NODE, okay) || !DT_NODE_HAS_STATUS(RAISE_LED_NODE, okay)
+// DT_NODE_HAS_STATUS checks the status of the node ID
+#if !DT_NODE_HAS_STATUS(LOWER_LED_NODE_ID, okay) || !DT_NODE_HAS_STATUS(RAISE_LED_NODE_ID, okay)
 #error "One or both layer-led aliases (lower-layer-led or raise-layer-led) is not defined or disabled in Devicetree."
 #endif
 
 // 3. Get device pointers once the nodes are verified
-static const struct device *lower_led_dev = DEVICE_DT_GET(LOWER_LED_NODE);
-static const struct device *raise_led_dev = DEVICE_DT_GET(RAISE_LED_NODE);
+// DEVICE_DT_GET uses the node ID to get the device pointer
+static const struct device *lower_led_dev = DEVICE_DT_GET(LOWER_LED_NODE_ID);
+static const struct device *raise_led_dev = DEVICE_DT_GET(RAISE_LED_NODE_ID);
 
 
 static int boot_leds_init(void) {
