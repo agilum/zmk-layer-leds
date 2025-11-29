@@ -33,8 +33,8 @@ static int boot_leds_init(void) {
     }
 
     // Set brightness to 50% (adjust as needed; 0-100)
-    led_set_brightness(lower_led_dev, 50); // PWM LED drivers typically ignore the channel (0)
-    led_set_brightness(raise_led_dev, 50);
+    led_set_brightness(lower_led_dev, 0, 50); // Correct: device, LED index (0), brightness (50)
+    led_set_brightness(raise_led_dev, 0, 50);
 
     return 0;
 }
