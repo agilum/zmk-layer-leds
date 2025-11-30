@@ -2,6 +2,7 @@
 #include <zephyr/drivers/led.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/devicetree.h>  // For DT_PATH
+#include <generated/devicetree_generated.h>
 
 LOG_MODULE_REGISTER(layer_leds, CONFIG_ZMK_LOG_LEVEL);
 
