@@ -1,7 +1,7 @@
 #include <zephyr/device.h>
 #include <zephyr/drivers/led.h>
 #include <zephyr/logging/log.h>
-#include <generated/devicetree_generated.h>  // Explicit for DT symbols
+#include <devicetree_generated.h>  // Explicit for DT symbols
 
 LOG_MODULE_REGISTER(layer_leds, CONFIG_ZMK_LOG_LEVEL);
 
