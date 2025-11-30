@@ -3,4 +3,3 @@ if(CONFIG_LAYER_LEDS)
     zephyr_include_directories(${PROJECT_BINARY_DIR}/zephyr/include/generated)
     target_sources(app PRIVATE src/layer_leds.c)
 endif()
-
