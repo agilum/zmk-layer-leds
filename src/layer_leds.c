@@ -1,8 +1,7 @@
-
 #include <zephyr/device.h>
 #include <zephyr/drivers/led.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/devicetree.h>
+#include <zephyr/devicetree.h>  // For DT_PATH
 
 LOG_MODULE_REGISTER(layer_leds, CONFIG_ZMK_LOG_LEVEL);
 
@@ -22,7 +21,7 @@ static int layer_leds_init(void) {
         return -ENODEV;
     }
 
-    // Light LEDs at 50% brightness (adjust 50 to 0-100 as needed)
+    // Light LEDs at 50% brightness after boot (adjust 50 to 0-100 as needed)
     led_set_brightness(lower_led_dev, 0, 50);
     led_set_brightness(raise_led_dev, 0, 50);
 
