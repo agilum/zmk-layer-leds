@@ -3,11 +3,10 @@
 #include <zephyr/init.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/led.h>
+#include <zephyr/types.h> // <-- FIX: Added to resolve definition of zmk_layer_t
 
 // --- ZMK EVENT HEADERS ---
-// FIX: Include the specific ZMK header that defines zmk_layer_t, 
-// as its dependency path via keymap.h seems broken in this environment.
-#include <zmk/layer.h> 
+// Removed '#include <zmk/layer.h>' which was causing a fatal error.
 #include <zmk/events/layer_state_changed.h>
 #include <zmk/keymap.h>
 
@@ -62,6 +61,7 @@ int layer_event_handler(const zmk_event_t *eh) {
 
     // Get the currently active layer ID
     // ZMK layers are 0 (BASE), 1 (LOWER), 2 (RAISE), 3, etc.
+    // zmk_layer_t is now defined thanks to <zephyr/types.h>
     const zmk_layer_t current_layer = zmk_keymap_get_highest_layer();
 
     LOG_DBG("Layer changed event. Highest active layer: %d", current_layer);
