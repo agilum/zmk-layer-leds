@@ -1,30 +1,38 @@
+#include <zephyr/devicetree.h>
+#include <zephyr/init.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/led.h>
 #include <zephyr/logging/log.h>
-#include <devicetree_generated.h>  // Correct include for generated DT symbols
-#include <zephyr/devicetree.h>  // For DT_PATH
 
 LOG_MODULE_REGISTER(layer_leds, CONFIG_ZMK_LOG_LEVEL);
 
-static const struct device *lower_led_dev;
-static const struct device *raise_led_dev;
+// Get the device pointer for the parent controller node.
+// This is the actual device instance created by the "pwm-leds" driver.
+static const struct device *layer_leds_dev = DEVICE_DT_GET(DT_NODELABEL(layer_leds));
+
+// Define the indices for the child LEDs (lower_led is index 0, raise_led is index 1)
+#define LOWER_LED_INDEX 0
+#define RAISE_LED_INDEX 1
 
 static int layer_leds_init(void) {
-    lower_led_dev = DEVICE_DT_GET(DT_PATH(layer_leds, lower_led));
-    if (!device_is_ready(lower_led_dev)) {
-        LOG_ERR("Lower LED device not ready");
+    // ------------------------------------
+    // --- Verification ---
+    // ------------------------------------
+    // Check 1: Verify the device pointer itself (checks if the device ordinal exists).
+    if (layer_leds_dev == NULL) {
+        LOG_ERR("LED CONTROLLER FAILED CREATION: Device pointer is NULL. Check DTS/Kconfig linkage.");
+        return -EINVAL;
+    }
+    
+    // Check 2: Verify the device is ready and initialized.
+    if (!device_is_ready(layer_leds_dev)) {
+        LOG_ERR("LED CONTROLLER '%s' NOT READY.", layer_leds_dev->name);
         return -ENODEV;
     }
 
-    raise_led_dev = DEVICE_DT_GET(DT_PATH(layer_leds, raise_led));
-    if (!device_is_ready(raise_led_dev)) {
-        LOG_ERR("Raise LED device not ready");
-        return -ENODEV;
-    }
-
-    // Light LEDs at 50% brightness after boot (adjust 50 to 0-100 as needed)
-    led_set_brightness(lower_led_dev, 0, 50);
-    led_set_brightness(raise_led_dev, 0, 50);
+    LOG_INF("LED CONTROLLER SUCCESS: Device '%s' found and ready.", layer_leds_dev->name);
+    LOG_INF("Ready to use LOWER LED (Index %d) and RAISE LED (Index %d).", 
+            LOWER_LED_INDEX, RAISE_LED_INDEX);
 
     return 0;
 }
