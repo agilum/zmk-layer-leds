@@ -1,14 +1,15 @@
+#include <zephyr/devicetree.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/led.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/devicetree.h>
+#include <zephyr/init.h>
+#include <zephyr/kernel.h>  // For k_sleep
+#include <zmk/keymap.h>
 #include <zmk/event_manager.h>
 #include <zmk/events/layer_state_changed.h>
-#include <zmk/keymap.h>
 
 LOG_MODULE_REGISTER(layer_leds, CONFIG_ZMK_LOG_LEVEL);
 
-// Layer indices (0-based; adjust if your keymap differs)
 #define LOWER_LAYER 1
 #define RAISE_LAYER 2
 
@@ -16,26 +17,17 @@ static const struct device *lower_led_dev = DEVICE_DT_GET(DT_PATH(layer_leds, lo
 static const struct device *raise_led_dev = DEVICE_DT_GET(DT_PATH(layer_leds, raise_led));
 
 static void set_lower_led(bool active) {
-    if (active) {
-        led_set_brightness(lower_led_dev, 0, 100);  // Full on; adjust for dimming
-    } else {
-        led_set_brightness(lower_led_dev, 0, 0);  // Off
-    }
+    led_set_brightness(lower_led_dev, 0, active ? 100 : 0);
 }
 
 static void set_raise_led(bool active) {
-    if (active) {
-        led_set_brightness(raise_led_dev, 0, 100);  // Full on; adjust for dimming
-    } else {
-        led_set_brightness(raise_led_dev, 0, 0);  // Off
-    }
+    led_set_brightness(raise_led_dev, 0, active ? 100 : 0);
 }
 
-static int handle_layer_state_changed(const zmk_event_t *eh) {
-    if ((eh)->type == &zmk_event_zmk_layer_state_changed) {  // Expanded to avoid macro issue
+static int handle_layer_state_changed(const zmk_event_t eh) {
+    if (is_zmk_layer_state_changed(eh)) {
         bool lower_active = zmk_keymap_layer_active(LOWER_LAYER);
         bool raise_active = zmk_keymap_layer_active(RAISE_LAYER);
-        LOG_DBG("Layer event: lower_active=%d, raise_active=%d", lower_active, raise_active);
         set_lower_led(lower_active);
         set_raise_led(raise_active);
     }
@@ -43,16 +35,12 @@ static int handle_layer_state_changed(const zmk_event_t *eh) {
 }
 
 static int layer_leds_init(void) {
-    if (!device_is_ready(lower_led_dev)) {
-        LOG_ERR("Lower LED device not ready");
-        return -ENODEV;
-    }
-    if (!device_is_ready(raise_led_dev)) {
-        LOG_ERR("Raise LED device not ready");
+    if (!device_is_ready(lower_led_dev) || !device_is_ready(raise_led_dev)) {
+        LOG_ERR("LED device not ready");
         return -ENODEV;
     }
 
-    // Optional boot test: light for 5s to verify
+    // Boot test: light for 5s
     set_lower_led(true);
     set_raise_led(true);
     k_sleep(K_MSEC(5000));
