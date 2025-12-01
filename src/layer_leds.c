@@ -5,8 +5,9 @@
 #include <zephyr/drivers/led.h>
 
 // --- ZMK EVENT HEADERS ---
-// Removed the problematic '#include <zmk.h>' line.
-// We rely on the event and keymap headers to correctly define zmk_layer_t.
+// FIX: Include the specific ZMK header that defines zmk_layer_t, 
+// as its dependency path via keymap.h seems broken in this environment.
+#include <zmk/layer.h> 
 #include <zmk/events/layer_state_changed.h>
 #include <zmk/keymap.h>
 
