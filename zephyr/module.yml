@@ -3,5 +3,6 @@ build:
   cmake: .
   kconfig: Kconfig
   depends:
+    - zmk
     
 
