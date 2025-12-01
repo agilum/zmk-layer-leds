@@ -3,6 +3,7 @@
 #include <zephyr/logging/log.h>
 #include <devicetree_generated.h>  // Correct include for generated DT symbols
 #include <zephyr/devicetree.h>  // For DT_PATH
+#include <zephyr/init.h> // REQUIRED for SYS_INIT
 
 LOG_MODULE_REGISTER(layer_leds, CONFIG_ZMK_LOG_LEVEL);
 //*****this is removed for testing 12.01.
