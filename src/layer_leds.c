@@ -2,7 +2,7 @@
 #include <zephyr/device.h>
 #include <zephyr/init.h>
 #include <zephyr/logging/log.h>
-#include <drivers/led.h> // Include the LED driver header
+#include <zephyr/drivers/led.h> // Include the LED driver header
 
 LOG_MODULE_REGISTER(layer_leds, CONFIG_ZMK_LOG_LEVEL);
 
