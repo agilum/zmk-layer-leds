@@ -5,6 +5,7 @@
 #include <zephyr/drivers/led.h>
 
 // --- ZMK EVENT HEADERS ---
+#include <zmk/zmk.h> // <-- FIX: Added to define core types like zmk_layer_t
 #include <zmk/events/layer_state_changed.h>
 #include <zmk/keymap.h>
 
@@ -99,6 +100,5 @@ static int layer_leds_init(void)
 
     return 0;
 }
-
 // Ensure the module runs after devices are initialized, which we confirmed work
 SYS_INIT(layer_leds_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
