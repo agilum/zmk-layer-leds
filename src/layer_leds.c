@@ -37,4 +37,4 @@ static int layer_leds_init(void) {
     return 0;
 }
 
-SYS_INIT(layer_leds_init, POST_KERNEL, 90);
+SYS_INIT(layer_leds_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
