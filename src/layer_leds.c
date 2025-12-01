@@ -2,24 +2,12 @@
 #include <zephyr/device.h>
 #include <zephyr/init.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/drivers/led.h>
-
-// --- ZMK EVENT HEADERS ---
-// Removed the problematic '#include <zmk.h>' line.
-// We rely on the event and keymap headers to correctly define zmk_layer_t.
-#include <zmk/events/layer_state_changed.h>
-#include <zmk/keymap.h>
-#include <stdint.h> // Include standard integer types
-
-// --- CRITICAL FIX FOR COMPILATION ---
-// Since the ZMK headers are failing to define the type zmk_layer_t 
-// due to environment specific include path issues, we manually define it.
-// zmk_layer_t is typically an alias for a simple unsigned integer.
-typedef uint8_t zmk_layer_t;
+#include <zephyr/drivers/led.h> // Corrected Include path as suggested by user
 
 LOG_MODULE_REGISTER(layer_leds, CONFIG_ZMK_LOG_LEVEL);
 
 // Get the device pointer using the Devicetree Node Label
+// This relies on the successful DTS structure you created: layer_leds: layer_leds { ... };
 #if DT_NODE_HAS_STATUS(DT_NODELABEL(layer_leds), okay)
 static const struct device *layer_leds_dev = DEVICE_DT_GET(DT_NODELABEL(layer_leds));
 
@@ -28,13 +16,13 @@ static const struct device *layer_leds_dev = DEVICE_DT_GET(DT_NODELABEL(layer_le
 #define RAISE_LED_INDEX 1
 
 #else
+// If the DTS node is missing or disabled, define a dummy device pointer
 static const struct device *layer_leds_dev = NULL;
 #define LOWER_LED_INDEX -1
 #define RAISE_LED_INDEX -1
 #warning "Layer LEDs device not found or not enabled in Devicetree."
 #endif
 
-// --- INITIALIZATION ---
 
 static int layer_leds_init(void)
 {
@@ -45,30 +33,27 @@ static int layer_leds_init(void)
     }
 
     LOG_INF("LED CONTROLLER SUCCESS: Device '%s' found and ready.", layer_leds_dev->name);
-    
-    // TEST: Turn both LEDs ON at 50% brightness immediately on boot
-    int ret;
+    LOG_INF("Ready to use LOWER LED (Index %d) and RAISE LED (Index %d).", 
+            LOWER_LED_INDEX, RAISE_LED_INDEX);
 
-    // Turn on LOWER LED (Index 0)
-    ret = led_set_brightness(layer_leds_dev, LOWER_LED_INDEX, 50);
-    if (ret != 0) {
-        LOG_ERR("Failed to turn on LOWER LED (err %d)", ret);
+    // 1. Turn on the LOWER LED (Index 0)
+    int ret_lower = led_on(layer_leds_dev, LOWER_LED_INDEX);
+    if (ret_lower != 0) {
+        LOG_ERR("Failed to turn on LOWER LED (err %d)", ret_lower);
     } else {
-        LOG_INF("LOWER LED turned ON (50%% brightness)");
+        LOG_INF("LOWER LED is now ON.");
     }
 
-    // Turn on RAISE LED (Index 1)
-    ret = led_set_brightness(layer_leds_dev, RAISE_LED_INDEX, 50);
-    if (ret != 0) {
-        LOG_ERR("Failed to turn on RAISE LED (err %d)", ret);
+    // 2. Turn on the RAISE LED (Index 1)
+    int ret_raise = led_on(layer_leds_dev, RAISE_LED_INDEX);
+    if (ret_raise != 0) {
+        LOG_ERR("Failed to turn on RAISE LED (err %d)", ret_raise);
     } else {
-        LOG_INF("RAISE LED turned ON (50%% brightness)");
+        LOG_INF("RAISE LED is now ON.");
     }
-
-    LOG_INF("Layer LED module initialized (Test Mode: Always On).");
 
     return 0;
 }
 
-// Ensure the module runs after devices are initialized
-SYS_INIT(layer_leds_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
+// Ensure the module runs after devices are initialized, which we confirmed works
+SYS_INIT(layer_leds_init, POST_KERNEL, 90);
