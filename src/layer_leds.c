@@ -1,65 +1,74 @@
+#include <zephyr/kernel.h>
 #include <zephyr/device.h>
-#include <zephyr/drivers/led.h>
+#include <zephyr/init.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/devicetree.h>
-#include <zmk/event_manager.h>
+#include <zephyr/drivers/led.h>
+
+// --- ZMK EVENT HEADERS ---
+// Removed the problematic '#include <zmk.h>' line.
+// We rely on the event and keymap headers to correctly define zmk_layer_t.
 #include <zmk/events/layer_state_changed.h>
 #include <zmk/keymap.h>
+#include <stdint.h> // Include standard integer types
+
+// --- CRITICAL FIX FOR COMPILATION ---
+// Since the ZMK headers are failing to define the type zmk_layer_t 
+// due to environment specific include path issues, we manually define it.
+// zmk_layer_t is typically an alias for a simple unsigned integer.
+typedef uint8_t zmk_layer_t;
 
 LOG_MODULE_REGISTER(layer_leds, CONFIG_ZMK_LOG_LEVEL);
 
-#define LOWER_LAYER 1  // Adjust based on your keymap (logged as layer 2)
-#define RAISE_LAYER 2  // Adjust based on your keymap (logged as layer 3)
+// Get the device pointer using the Devicetree Node Label
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(layer_leds), okay)
+static const struct device *layer_leds_dev = DEVICE_DT_GET(DT_NODELABEL(layer_leds));
 
-static const struct device *lower_led_dev = DEVICE_DT_GET(DT_PATH(layer_leds, lower_led));
-static const struct device *raise_led_dev = DEVICE_DT_GET(DT_PATH(layer_leds, raise_led));
+// Define the two LED indices based on the child nodes in DTS
+#define LOWER_LED_INDEX 0
+#define RAISE_LED_INDEX 1
 
-static void set_lower_led(bool active) {
-    if (active) {
-        led_set_brightness(lower_led_dev, 0, 100);  // Full on; adjust for dimming
+#else
+static const struct device *layer_leds_dev = NULL;
+#define LOWER_LED_INDEX -1
+#define RAISE_LED_INDEX -1
+#warning "Layer LEDs device not found or not enabled in Devicetree."
+#endif
+
+// --- INITIALIZATION ---
+
+static int layer_leds_init(void)
+{
+    if (!device_is_ready(layer_leds_dev)) {
+        LOG_ERR("LED CONTROLLER FAILURE: Device '%s' not ready.", 
+                layer_leds_dev ? layer_leds_dev->name : "NULL");
+        return -ENODEV;
+    }
+
+    LOG_INF("LED CONTROLLER SUCCESS: Device '%s' found and ready.", layer_leds_dev->name);
+    
+    // TEST: Turn both LEDs ON at 50% brightness immediately on boot
+    int ret;
+
+    // Turn on LOWER LED (Index 0)
+    ret = led_set_brightness(layer_leds_dev, LOWER_LED_INDEX, 50);
+    if (ret != 0) {
+        LOG_ERR("Failed to turn on LOWER LED (err %d)", ret);
     } else {
-        led_set_brightness(lower_led_dev, 0, 0);    // Off
+        LOG_INF("LOWER LED turned ON (50%% brightness)");
     }
-}
 
-static void set_raise_led(bool active) {
-    if (active) {
-        led_set_brightness(raise_led_dev, 0, 100);  // Full on; adjust for dimming
+    // Turn on RAISE LED (Index 1)
+    ret = led_set_brightness(layer_leds_dev, RAISE_LED_INDEX, 50);
+    if (ret != 0) {
+        LOG_ERR("Failed to turn on RAISE LED (err %d)", ret);
     } else {
-        led_set_brightness(raise_led_dev, 0, 0);    // Off
+        LOG_INF("RAISE LED turned ON (50%% brightness)");
     }
-}
 
-static int handle_layer_state_changed(const zmk_event_t *eh) {
-    if (is_zmk_layer_state_changed(eh)) {
-        bool lower_active = zmk_keymap_layer_active(LOWER_LAYER);
-        bool raise_active = zmk_keymap_layer_active(RAISE_LAYER);
-        set_lower_led(lower_active);
-        set_raise_led(raise_active);
-    }
+    LOG_INF("Layer LED module initialized (Test Mode: Always On).");
+
     return 0;
 }
 
-static int layer_leds_init(void) {
-    if (!device_is_ready(lower_led_dev)) {
-        LOG_ERR("Lower LED device not ready");
-        return -ENODEV;
-    }
-    if (!device_is_ready(raise_led_dev)) {
-        LOG_ERR("Raise LED device not ready");
-        return -ENODEV;
-    }
-    // Optional boot test: light for 5s
-    set_lower_led(true);
-    set_raise_led(true);
-    k_sleep(K_MSEC(5000));
-    set_lower_led(false);
-    set_raise_led(false);
-
-    return 0;
-}
-
-ZMK_LISTENER(layer_leds_listener, handle_layer_state_changed);
-ZMK_SUBSCRIPTION(layer_leds_listener, zmk_layer_state_changed);
-
+// Ensure the module runs after devices are initialized
 SYS_INIT(layer_leds_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
