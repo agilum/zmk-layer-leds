@@ -1,59 +1,68 @@
-#include <zephyr/kernel.h>
 #include <zephyr/device.h>
-#include <zephyr/init.h>
+#include <zephyr/drivers/led.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/drivers/led.h> // Corrected Include path as suggested by user
+#include <zephyr/devicetree.h>
+#include <zmk/event_manager.h>
+#include <zmk/events/layer_state_changed.h>
+#include <zmk/keymap.h>
 
 LOG_MODULE_REGISTER(layer_leds, CONFIG_ZMK_LOG_LEVEL);
 
-// Get the device pointer using the Devicetree Node Label
-// This relies on the successful DTS structure you created: layer_leds: layer_leds { ... };
-#if DT_NODE_HAS_STATUS(DT_NODELABEL(layer_leds), okay)
-static const struct device *layer_leds_dev = DEVICE_DT_GET(DT_NODELABEL(layer_leds));
+// Layer indices (0-based; adjust if your keymap differs)
+#define LOWER_LAYER 1
+#define RAISE_LAYER 2
 
-// Define the two LED indices based on the child nodes in DTS
-#define LOWER_LED_INDEX 0
-#define RAISE_LED_INDEX 1
+static const struct device *lower_led_dev = DEVICE_DT_GET(DT_PATH(layer_leds, lower_led));
+static const struct device *raise_led_dev = DEVICE_DT_GET(DT_PATH(layer_leds, raise_led));
 
-#else
-// If the DTS node is missing or disabled, define a dummy device pointer
-static const struct device *layer_leds_dev = NULL;
-#define LOWER_LED_INDEX -1
-#define RAISE_LED_INDEX -1
-#warning "Layer LEDs device not found or not enabled in Devicetree."
-#endif
+static void set_lower_led(bool active) {
+    if (active) {
+        led_set_brightness(lower_led_dev, 0, 100);  // Full on; adjust for dimming
+    } else {
+        led_set_brightness(lower_led_dev, 0, 0);  // Off
+    }
+}
 
+static void set_raise_led(bool active) {
+    if (active) {
+        led_set_brightness(raise_led_dev, 0, 100);  // Full on; adjust for dimming
+    } else {
+        led_set_brightness(raise_led_dev, 0, 0);  // Off
+    }
+}
 
-static int layer_leds_init(void)
-{
-    if (!device_is_ready(layer_leds_dev)) {
-        LOG_ERR("LED CONTROLLER FAILURE: Device '%s' not ready.", 
-                layer_leds_dev ? layer_leds_dev->name : "NULL");
+static int handle_layer_state_changed(const zmk_event_t *eh) {
+    if ((eh)->type == &zmk_event_zmk_layer_state_changed) {  // Expanded to avoid macro issue
+        bool lower_active = zmk_keymap_layer_active(LOWER_LAYER);
+        bool raise_active = zmk_keymap_layer_active(RAISE_LAYER);
+        LOG_DBG("Layer event: lower_active=%d, raise_active=%d", lower_active, raise_active);
+        set_lower_led(lower_active);
+        set_raise_led(raise_active);
+    }
+    return 0;
+}
+
+static int layer_leds_init(void) {
+    if (!device_is_ready(lower_led_dev)) {
+        LOG_ERR("Lower LED device not ready");
+        return -ENODEV;
+    }
+    if (!device_is_ready(raise_led_dev)) {
+        LOG_ERR("Raise LED device not ready");
         return -ENODEV;
     }
 
-    LOG_INF("LED CONTROLLER SUCCESS: Device '%s' found and ready.", layer_leds_dev->name);
-    LOG_INF("Ready to use LOWER LED (Index %d) and RAISE LED (Index %d).", 
-            LOWER_LED_INDEX, RAISE_LED_INDEX);
-
-    // 1. Turn on the LOWER LED (Index 0)
-    int ret_lower = led_on(layer_leds_dev, LOWER_LED_INDEX);
-    if (ret_lower != 0) {
-        LOG_ERR("Failed to turn on LOWER LED (err %d)", ret_lower);
-    } else {
-        LOG_INF("LOWER LED is now ON.");
-    }
-
-    // 2. Turn on the RAISE LED (Index 1)
-    int ret_raise = led_on(layer_leds_dev, RAISE_LED_INDEX);
-    if (ret_raise != 0) {
-        LOG_ERR("Failed to turn on RAISE LED (err %d)", ret_raise);
-    } else {
-        LOG_INF("RAISE LED is now ON.");
-    }
+    // Optional boot test: light for 5s to verify
+    set_lower_led(true);
+    set_raise_led(true);
+    k_sleep(K_MSEC(5000));
+    set_lower_led(false);
+    set_raise_led(false);
 
     return 0;
 }
 
-// Ensure the module runs after devices are initialized, which we confirmed works
-SYS_INIT(layer_leds_init, POST_KERNEL, 90);
+ZMK_LISTENER(layer_leds_listener, handle_layer_state_changed);
+ZMK_SUBSCRIPTION(layer_leds_listener, zmk_layer_state_changed);
+
+SYS_INIT(layer_leds_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
