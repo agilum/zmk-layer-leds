@@ -35,10 +35,10 @@ static void update_leds(void) {
 
     // Set brightness (0 = OFF, 50 = ON at 50% brightness)
     // Note: The second argument is the CHILD INDEX (0 or 1)
-    led_set_brightness(layer_leds_dev, LOWER_LED_INDEX, lower_active ? 50 : 0);
+    led_set_brightness(layer_leds_dev, LOWER_LED_INDEX, lower_active ? 25 : 0);
     led_set_brightness(layer_leds_dev, RAISE_LED_INDEX, raise_active ? 50 : 0);
     
-    LOG_DBG("Lower=%d, Raise=%d", lower_active, raise_active);
+    LOG_DBG("Update LEDs: Lower=%d, Raise=%d", lower_active, raise_active);
 }
 
 // --- ZMK EVENT LISTENER ---
@@ -60,16 +60,13 @@ static int layer_leds_init(void) {
         return -ENODEV;
     }
 
-    // Boot test: Flash LEDs for 1 second to confirm startup
-    led_set_brightness(layer_leds_dev, LOWER_LED_INDEX, 50);
-    led_set_brightness(layer_leds_dev, RAISE_LED_INDEX, 50);
-    k_sleep(K_MSEC(1000));
+    // --- Added Debug Message on Device Ready ---
+    LOG_INF("Layer LEDs device ready and initialized.");
     
-    // Turn off and sync with actual layer state
-    led_set_brightness(layer_leds_dev, LOWER_LED_INDEX, 0);
-    led_set_brightness(layer_leds_dev, RAISE_LED_INDEX, 0);
+    // --- Removed Boot Blink Code ---
+    // The previous k_sleep(K_MSEC(1000)) block is now removed.
     
-    // Initial sync
+    // Initial sync: This sets the LEDs to the current active layer state (likely both off)
     update_leds();
 
     return 0;
