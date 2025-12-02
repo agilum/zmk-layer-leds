@@ -38,7 +38,7 @@ static void update_leds(void) {
     led_set_brightness(layer_leds_dev, LOWER_LED_INDEX, lower_active ? 50 : 0);
     led_set_brightness(layer_leds_dev, RAISE_LED_INDEX, raise_active ? 50 : 0);
     
-    LOG_DBG("Update LEDs: Lower=%d, Raise=%d", lower_active, raise_active);
+    LOG_DBG("Lower=%d, Raise=%d", lower_active, raise_active);
 }
 
 // --- ZMK EVENT LISTENER ---
