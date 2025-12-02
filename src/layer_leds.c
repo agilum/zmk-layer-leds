@@ -1,61 +1,79 @@
+#include <zephyr/kernel.h>
 #include <zephyr/device.h>
-#include <zephyr/drivers/led.h>
+#include <zephyr/init.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/devicetree.h>
-#include <zmk/event_manager.h>
+#include <zephyr/drivers/led.h>
+
+// --- ZMK HEADERS ---
 #include <zmk/events/layer_state_changed.h>
 #include <zmk/keymap.h>
-#include <zephyr/kernel.h>
 
 LOG_MODULE_REGISTER(layer_leds, CONFIG_ZMK_LOG_LEVEL);
 
-// Layer indices (0-based; adjust if your keymap differs)
-#define LOWER_LAYER 1
-#define RAISE_LAYER 2
+// --- CONFIGURATION ---
+// Define the indices of your layers (0-based)
+#define LOWER_LAYER_ID 1
+#define RAISE_LAYER_ID 2
 
-static const struct device *lower_led_dev = DEVICE_DT_GET(DT_PATH(layer_leds, lower_led));
-static const struct device *raise_led_dev = DEVICE_DT_GET(DT_PATH(layer_leds, raise_led));
+// Define the LED channel indices (0 and 1) on the controller
+#define LOWER_LED_INDEX 0
+#define RAISE_LED_INDEX 1
 
-static void set_lower_led(bool active) {
-    led_set_brightness(lower_led_dev, 0, active ? 100 : 0);
-}
+// Get the PARENT device (the controller)
+// Assuming your DTS has: layer_leds: layer_leds { ... };
+static const struct device *layer_leds_dev = DEVICE_DT_GET(DT_NODELABEL(layer_leds));
 
-static void set_raise_led(bool active) {
-    led_set_brightness(raise_led_dev, 0, active ? 100 : 0);
-}
-
-static int handle_layer_state_changed(const zmk_event_t *eh) {
-    LOG_DBG("Layer handler triggered");
-    if (eh->type == &zmk_layer_state_changed) {  // Expanded macro
-        bool lower_active = zmk_keymap_layer_active(LOWER_LAYER);
-        bool raise_active = zmk_keymap_layer_active(RAISE_LAYER);
-        set_lower_led(lower_active);
-        set_raise_led(raise_active);
+// --- HELPER FUNCTION ---
+static void update_leds(void) {
+    if (!device_is_ready(layer_leds_dev)) {
+        return;
     }
-    return 0;
+
+    // Check layer state
+    bool lower_active = zmk_keymap_layer_active(LOWER_LAYER_ID);
+    bool raise_active = zmk_keymap_layer_active(RAISE_LAYER_ID);
+
+    // Set brightness (0 = OFF, 50 = ON at 50% brightness)
+    // Note: The second argument is the CHILD INDEX (0 or 1)
+    led_set_brightness(layer_leds_dev, LOWER_LED_INDEX, lower_active ? 50 : 0);
+    led_set_brightness(layer_leds_dev, RAISE_LED_INDEX, raise_active ? 50 : 0);
+    
+    LOG_DBG("Update LEDs: Lower=%d, Raise=%d", lower_active, raise_active);
 }
 
+// --- ZMK EVENT LISTENER ---
+static int layer_event_handler(const zmk_event_t *eh) {
+    // We only care about layer state changes
+    if (as_zmk_layer_state_changed(eh)) {
+        update_leds();
+    }
+    return ZMK_EV_EVENT_BUBBLE;
+}
+
+ZMK_LISTENER(layer_leds, layer_event_handler);
+ZMK_SUBSCRIPTION(layer_leds, zmk_layer_state_changed);
+
+// --- INITIALIZATION ---
 static int layer_leds_init(void) {
-    if (!device_is_ready(lower_led_dev)) {
-        LOG_ERR("Lower LED device not ready");
-        return -ENODEV;
-    }
-    if (!device_is_ready(raise_led_dev)) {
-        LOG_ERR("Raise LED device not ready");
+    if (!device_is_ready(layer_leds_dev)) {
+        LOG_ERR("Layer LEDs device '%s' not ready", layer_leds_dev->name);
         return -ENODEV;
     }
 
-    // Boot test: light for 5s to verify
-    set_lower_led(true);
-    set_raise_led(true);
-    k_sleep(K_MSEC(5000));
-    set_lower_led(false);
-    set_raise_led(false);
+    // Boot test: Flash LEDs for 1 second to confirm startup
+    led_set_brightness(layer_leds_dev, LOWER_LED_INDEX, 50);
+    led_set_brightness(layer_leds_dev, RAISE_LED_INDEX, 50);
+    k_sleep(K_MSEC(1000));
+    
+    // Turn off and sync with actual layer state
+    led_set_brightness(layer_leds_dev, LOWER_LED_INDEX, 0);
+    led_set_brightness(layer_leds_dev, RAISE_LED_INDEX, 0);
+    
+    // Initial sync
+    update_leds();
 
     return 0;
 }
 
-ZMK_LISTENER(layer_leds_listener, handle_layer_state_changed);
-ZMK_SUBSCRIPTION(layer_leds_listener, zmk_layer_state_changed);
-
+// Use APPLICATION priority to ensure ZMK keymap services are ready
 SYS_INIT(layer_leds_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
