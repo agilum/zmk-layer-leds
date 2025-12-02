@@ -15,6 +15,9 @@ LOG_MODULE_REGISTER(layer_leds, CONFIG_ZMK_LOG_LEVEL);
 #define LOWER_LAYER_ID 1
 #define RAISE_LAYER_ID 2
 
+// Define the desired brightness (0-100) when Caps Lock is ON
+#define LED_BRIGHTNESS 5
+
 // Define the LED channel indices (0 and 1) on the controller
 #define LOWER_LED_INDEX 0
 #define RAISE_LED_INDEX 1
@@ -35,8 +38,8 @@ static void update_leds(void) {
 
     // Set brightness (0 = OFF, 50 = ON at 50% brightness)
     // Note: The second argument is the CHILD INDEX (0 or 1)
-    led_set_brightness(layer_leds_dev, LOWER_LED_INDEX, lower_active ? 10 : 0);
-    led_set_brightness(layer_leds_dev, RAISE_LED_INDEX, raise_active ? 10 : 0);
+    led_set_brightness(layer_leds_dev, LOWER_LED_INDEX, lower_active ? LED_BRIGHTNESS : 0);
+    led_set_brightness(layer_leds_dev, RAISE_LED_INDEX, raise_active ? LED_BRIGHTNESS : 0);
     
     LOG_DBG("Lower=%d, Raise=%d", lower_active, raise_active);
 }
