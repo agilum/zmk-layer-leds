@@ -7,6 +7,7 @@
 // --- ZMK HEADERS ---
 #include <zmk/events/layer_state_changed.h>
 #include <zmk/keymap.h>
+#include <zmk/backlight.h>
 
 LOG_MODULE_REGISTER(layer_leds, CONFIG_ZMK_LOG_LEVEL);
 
@@ -15,8 +16,8 @@ LOG_MODULE_REGISTER(layer_leds, CONFIG_ZMK_LOG_LEVEL);
 #define LOWER_LAYER_ID 1
 #define RAISE_LAYER_ID 2
 
-// Define the desired brightness (0-100) when Caps Lock is ON
-#define LED_BRIGHTNESS 5
+// Define the desired brightness (0-100) when Layer  is ON
+#define DEFAUL_LED_BRIGHTNESS 10
 
 // Define the LED channel indices (0 and 1) on the controller
 #define LOWER_LED_INDEX 0
@@ -36,10 +37,42 @@ static void update_leds(void) {
     bool lower_active = zmk_keymap_layer_active(LOWER_LAYER_ID);
     bool raise_active = zmk_keymap_layer_active(RAISE_LAYER_ID);
 
+    // start of adaptive brightness
+    uint8_t brightness_percent;
+
+#if IS_ENABLED(CONFIG_ZMK_BACKLIGHT)
+        // 1. Get the current persistent backlight level (0-100% or levels)
+        //int current_level = zmk_backlight_get_level();
+        
+        // 2. Convert level to percentage (0-100)
+        // FIX: Corrected typo from zmk_backlight_calc_brighness_val to zmk_backlight_calc_brightness_val
+        brightness_percent = zmk_backlight_get_brt();
+        LOG_INF("Stored backlight brightness: %d%%", brightness_percent);
+        // 3. Logic: If backlight is ON, make Caps Lock slightly brighter (+20%)
+        // If backlight is OFF (0%), keep Caps Lock somewhat visible (e.g. 20%) or off?
+        if (brightness_percent == 0) {
+             brightness_percent = 10; // Standalone brightness if backlight is off
+        } else {
+             brightness_percent += 40; // Boost above ambient backlight
+        }
+#else
+        // Fallback if CONFIG_ZMK_BACKLIGHT is not enabled in Kconfig
+        brightness_percent = DEFAULT_LED_BRIGHTNESS;
+#endif
+        
+        // 4. Clamp to maximum 100% to avoid driver errors
+        if (brightness_percent > 100) {
+            brightness_percent = 100;
+        }
+
+        // 5. Final calculation: 0 if inactive, calculated percent if active
+        //int final_brightness = laer_lock_active ? brightness_percent : 0;
+    
+
     // Set brightness (0 = OFF, 50 = ON at 50% brightness)
     // Note: The second argument is the CHILD INDEX (0 or 1)
-    led_set_brightness(layer_leds_dev, LOWER_LED_INDEX, lower_active ? LED_BRIGHTNESS : 0);
-    led_set_brightness(layer_leds_dev, RAISE_LED_INDEX, raise_active ? LED_BRIGHTNESS : 0);
+    led_set_brightness(layer_leds_dev, LOWER_LED_INDEX, lower_active ? brightness_percent : 0);
+    led_set_brightness(layer_leds_dev, RAISE_LED_INDEX, raise_active ? brightness_percent : 0);
     
     LOG_DBG("Lower=%d, Raise=%d", lower_active, raise_active);
 }
